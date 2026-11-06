@@ -2023,7 +2023,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     if (logoutBtn) logoutBtn.onclick = () => {
         localStorage.removeItem("sessionToken");
-        window.location.href = "/grace_check_manager"
+        window.location.href = "/hocom_check_manager"
     };
     
     /* ===== 打卡功能 ===== */

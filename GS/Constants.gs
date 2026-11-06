@@ -3,7 +3,7 @@
 // ==================== LINE 登入設定 ====================
 const LINE_CHANNEL_ID     = PropertiesService.getScriptProperties().getProperty("LINE_CHANNEL_ID");
 const LINE_CHANNEL_SECRET = PropertiesService.getScriptProperties().getProperty("LINE_CHANNEL_SECRET");
-const LINE_REDIRECT_URL   = "https://eric693.github.io/grace_check_manager/";
+const LINE_REDIRECT_URL   = "https://eric693.github.io/hocom_check_manager/";
 
 // ==================== Session 設定 ====================
 // 登入期限 90 天，每次使用時剩不到一半就延長（見 checkSession_）：
