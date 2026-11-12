@@ -220,6 +220,8 @@
     "RECORDS_LOAD_FAILED": "โหลดข้อมูลไม่สำเร็จ",
     "RECORDS_PUNCH_COUNT": "ทั้งหมด {count} รายการ",
     "RECORDS_NO_PUNCHES": "ไม่มีประวัติการลงเวลาในช่วงนี้",
+    "RECORDS_LOCATION_NONE": "(ไม่ได้บันทึกสถานที่)",
+    "RECORDS_PUNCH_EXPORT": "ส่งออก CSV เวลาเข้า-ออกรายวัน",
     "RECORDS_FILL_REQUIRED": "กรุณาเลือกพนักงาน วันที่ และเวลา",
     "RECORDS_PUNCH_UPDATED": "แก้ไขการลงเวลาแล้ว",
     "RECORDS_PUNCH_ADDED": "เพิ่มการลงเวลาแล้ว",

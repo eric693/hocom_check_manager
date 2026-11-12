@@ -209,6 +209,8 @@
   "RECORDS_LOAD_FAILED": "Gagal memuat data",
   "RECORDS_PUNCH_COUNT": "{count} catatan",
   "RECORDS_NO_PUNCHES": "Tidak ada riwayat absen pada periode ini",
+  "RECORDS_LOCATION_NONE": "(Lokasi tidak tercatat)",
+  "RECORDS_PUNCH_EXPORT": "Ekspor CSV masuk/keluar harian",
   "RECORDS_FILL_REQUIRED": "Pilih karyawan, tanggal, dan waktu",
   "RECORDS_PUNCH_UPDATED": "Absen diubah",
   "RECORDS_PUNCH_ADDED": "Absen ditambahkan",

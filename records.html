@@ -148,10 +148,18 @@
                             <label for="punch-employee" data-i18n="SHIFT_EMPLOYEE_LABEL">員工</label>
                             <select id="punch-employee"><option value="" data-i18n="OPTION_ALL">全部</option></select>
                         </div>
+                        <div class="rec-field">
+                            <label for="punch-location" data-i18n="SHIFT_LOCATION_LABEL">地點</label>
+                            <select id="punch-location">
+                                <option value="" data-i18n="OPTION_ALL">全部</option>
+                                <option value="__none__" data-i18n="RECORDS_LOCATION_NONE">（未記錄地點）</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="rec-actions">
                         <button type="button" id="punch-search-btn" class="rec-btn rec-btn-primary" data-i18n="RECORDS_SEARCH">查詢</button>
                         <button type="button" id="punch-add-btn" class="rec-btn rec-btn-secondary" data-i18n="RECORDS_PUNCH_ADD">新增打卡</button>
+                        <button type="button" id="punch-export-btn" class="rec-btn rec-btn-secondary" data-i18n="RECORDS_PUNCH_EXPORT">匯出每日上下班 CSV</button>
                     </div>
                 </div>
 

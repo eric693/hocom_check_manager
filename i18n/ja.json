@@ -209,6 +209,8 @@
   "RECORDS_LOAD_FAILED": "データを読み込めませんでした",
   "RECORDS_PUNCH_COUNT": "{count} 件",
   "RECORDS_NO_PUNCHES": "この期間の打刻記録はありません",
+  "RECORDS_LOCATION_NONE": "（場所の記録なし）",
+  "RECORDS_PUNCH_EXPORT": "日別の出退勤 CSV を出力",
   "RECORDS_FILL_REQUIRED": "従業員・日付・時刻を選んでください",
   "RECORDS_PUNCH_UPDATED": "打刻を更新しました",
   "RECORDS_PUNCH_ADDED": "打刻を追加しました",

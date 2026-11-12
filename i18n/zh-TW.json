@@ -209,6 +209,8 @@
     "RECORDS_LOAD_FAILED": "載入資料失敗",
     "RECORDS_PUNCH_COUNT": "共 {count} 筆",
     "RECORDS_NO_PUNCHES": "這段期間沒有打卡紀錄",
+    "RECORDS_LOCATION_NONE": "（未記錄地點）",
+    "RECORDS_PUNCH_EXPORT": "匯出每日上下班 CSV",
     "RECORDS_FILL_REQUIRED": "請選擇員工、日期和時間",
     "RECORDS_PUNCH_UPDATED": "打卡已修改",
     "RECORDS_PUNCH_ADDED": "打卡已新增",

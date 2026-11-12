@@ -209,6 +209,8 @@
   "RECORDS_LOAD_FAILED": "Could not load the data",
   "RECORDS_PUNCH_COUNT": "{count} records",
   "RECORDS_NO_PUNCHES": "No punch records in this period",
+  "RECORDS_LOCATION_NONE": "(No location recorded)",
+  "RECORDS_PUNCH_EXPORT": "Export daily in/out CSV",
   "RECORDS_FILL_REQUIRED": "Choose an employee, date, and time",
   "RECORDS_PUNCH_UPDATED": "Punch updated",
   "RECORDS_PUNCH_ADDED": "Punch added",

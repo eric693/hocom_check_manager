@@ -94,6 +94,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('punch-search-btn').addEventListener('click', loadPunches);
     document.getElementById('punch-add-btn').addEventListener('click', () => openPunchForm(null));
+    document.getElementById('punch-location').addEventListener('change', renderPunches);
+    document.getElementById('punch-export-btn').addEventListener('click', downloadPunchDailyCsv);
     document.getElementById('pf-save').addEventListener('click', savePunch);
     document.getElementById('pf-cancel').addEventListener('click', closePunchForm);
     document.getElementById('lf-save').addEventListener('click', saveLeave);
@@ -146,7 +148,11 @@ async function loadLocationOptions() {
     try {
         const data = await apiRequestJson('getLocations', ADMIN_READ);
         const select = document.getElementById('pf-location');
-        (data.ok ? data.locations || [] : []).forEach(loc => select.add(new Option(loc.name, loc.name)));
+        const filter = document.getElementById('punch-location');
+        (data.ok ? data.locations || [] : []).forEach(loc => {
+            select.add(new Option(loc.name, loc.name));
+            filter.add(new Option(loc.name, loc.name));
+        });
     } catch (error) {
         console.warn('載入地點失敗:', error);
     }
@@ -177,6 +183,7 @@ async function loadPunches() {
                 return;
             }
             punchRecords = data.records || [];
+            addRecordedLocationsToFilter();
             renderPunches();
         } catch (error) {
             console.error('載入打卡紀錄失敗:', error);
@@ -186,17 +193,39 @@ async function loadPunches() {
     });
 }
 
+const LOCATION_NONE = '__none__';   // 地點篩選的「未記錄地點」
+
+/** 這個地點符不符合地點篩選（空字串 = 全部） */
+function matchesLocationFilter(location, selected) {
+    if (!selected) return true;
+    return selected === LOCATION_NONE ? !location : location === selected;
+}
+
+/**
+ * 紀錄裡出現、但地點表已經沒有的名稱（改名或刪除前打的卡）也放進篩選選單，
+ * 不然那些舊紀錄只能在「全部」裡找。
+ */
+function addRecordedLocationsToFilter() {
+    const filter = document.getElementById('punch-location');
+    const known = new Set([...filter.options].map(o => o.value));
+    [...new Set(punchRecords.map(rec => rec.location).filter(Boolean))].sort().forEach(name => {
+        if (!known.has(name)) filter.add(new Option(name, name));
+    });
+}
+
 function renderPunches() {
     const body = document.getElementById('punch-body');
     const summary = document.getElementById('punch-summary');
-    summary.textContent = t('RECORDS_PUNCH_COUNT', { count: punchRecords.length });
-    if (!punchRecords.length) {
+    const selected = document.getElementById('punch-location').value;
+    const records = punchRecords.filter(rec => matchesLocationFilter(rec.location, selected));
+    summary.textContent = t('RECORDS_PUNCH_COUNT', { count: records.length });
+    if (!records.length) {
         body.innerHTML = `<tr><td colspan="8" class="rec-empty">${escapeHtml(t('RECORDS_NO_PUNCHES'))}</td></tr>`;
         return;
     }
     body.innerHTML = '';
     let lastDate = '';
-    punchRecords.forEach((rec, index) => {
+    records.forEach((rec, index) => {
         const tr = document.createElement('tr');
         if (rec.date !== lastDate) tr.className = 'date-start';
         const status = PUNCH_STATUS[rec.status] || PUNCH_STATUS.NORMAL;
@@ -218,11 +247,84 @@ function renderPunches() {
         body.appendChild(tr);
     });
     body.querySelectorAll('[data-edit]').forEach(btn => {
-        btn.addEventListener('click', () => openPunchForm(punchRecords[Number(btn.dataset.edit)]));
+        btn.addEventListener('click', () => openPunchForm(records[Number(btn.dataset.edit)]));
     });
     body.querySelectorAll('[data-delete]').forEach(btn => {
-        btn.addEventListener('click', () => deletePunch(punchRecords[Number(btn.dataset.delete)], btn));
+        btn.addEventListener('click', () => deletePunch(records[Number(btn.dataset.delete)], btn));
     });
+}
+
+/**
+ * 把查到的打卡配成「一人一天一列」：上班配它之後 24 小時內的第一筆下班（跨午夜的班算在上班那天）。
+ * 配不到的單獨一列，另一邊留空。被駁回的補打卡不算。
+ * 配對用全部地點的紀錄做，之後才套地點篩選：在 A 點上班、B 點下班的人，選 A 或 B 都看得到完整的一列。
+ */
+function buildPunchDailyRows(selected) {
+    const at = rec => new Date(`${rec.date}T${rec.time}`).getTime();
+    const byUser = new Map();
+    punchRecords.filter(rec => rec.status !== 'ADJUST_REJECTED').forEach(rec => {
+        if (!byUser.has(rec.userId)) byUser.set(rec.userId, []);
+        byUser.get(rec.userId).push(rec);
+    });
+
+    const rows = [];
+    byUser.forEach(list => {
+        list.sort((a, b) => at(a) - at(b));
+        let open = null;
+        list.forEach(rec => {
+            if (rec.type === '上班') {
+                if (open) rows.push({ in: open, out: null });
+                open = rec;
+            } else if (rec.type === '下班') {
+                const paired = open && at(rec) - at(open) <= 86400000;
+                if (open && !paired) rows.push({ in: open, out: null });
+                rows.push({ in: paired ? open : null, out: rec });
+                open = null;
+            }
+        });
+        if (open) rows.push({ in: open, out: null });
+    });
+
+    const key = row => {
+        const first = row.in || row.out;
+        return `${first.date} ${first.name} ${first.time}`;
+    };
+    return rows
+        .filter(row => [row.in, row.out].some(rec => rec && matchesLocationFilter(rec.location, selected)))
+        .sort((a, b) => key(a).localeCompare(key(b)));
+}
+
+function downloadPunchDailyCsv() {
+    const filter = document.getElementById('punch-location');
+    const rows = buildPunchDailyRows(filter.value);
+    if (!rows.length) {
+        recMessage(t('RECORDS_NO_DATA'), 'error');
+        return;
+    }
+    const cell = v => { const s = String(v ?? ''); return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    const location = t('SHIFT_LOCATION_LABEL');
+    const lines = [[t('RECORDS_DATE'), t('SHIFT_EMPLOYEE_LABEL'), t('PUNCH_IN'), `${t('PUNCH_IN')} ${location}`,
+        t('PUNCH_OUT'), `${t('PUNCH_OUT')} ${location}`, t('RECORDS_NOTE')].map(cell).join(',')];
+    rows.forEach(row => {
+        const first = row.in || row.out;
+        // 下班在隔天（跨午夜）時把日期一起寫出來，免得看起來像比上班還早
+        const outTime = row.out ? (row.in && row.out.date !== row.in.date ? `${row.out.date} ${row.out.time}` : row.out.time) : '';
+        const notes = [row.in, row.out].map(rec => rec && rec.note).filter(Boolean);
+        lines.push([first.date, first.name, row.in ? row.in.time : '', row.in ? row.in.location : '',
+            outTime, row.out ? row.out.location : '', [...new Set(notes)].join('；')].map(cell).join(','));
+    });
+
+    const place = filter.value ? filter.options[filter.selectedIndex].text : t('OPTION_ALL');
+    const start = document.getElementById('punch-start').value;
+    const end = document.getElementById('punch-end').value;
+    const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `打卡紀錄_${place.replace(/[\\/:*?"<>|]/g, '_')}_${start}_${end}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 }
 
 function openPunchForm(rec) {

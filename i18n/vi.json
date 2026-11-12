@@ -222,6 +222,8 @@
   "RECORDS_LOAD_FAILED": "Không tải được dữ liệu",
   "RECORDS_PUNCH_COUNT": "Tổng {count} lượt",
   "RECORDS_NO_PUNCHES": "Không có dữ liệu chấm công trong khoảng này",
+  "RECORDS_LOCATION_NONE": "(Không ghi địa điểm)",
+  "RECORDS_PUNCH_EXPORT": "Xuất CSV giờ vào/ra theo ngày",
   "RECORDS_FILL_REQUIRED": "Vui lòng chọn nhân viên, ngày và giờ",
   "RECORDS_PUNCH_UPDATED": "Đã sửa chấm công",
   "RECORDS_PUNCH_ADDED": "Đã thêm chấm công",
