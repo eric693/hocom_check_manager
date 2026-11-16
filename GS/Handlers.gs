@@ -245,7 +245,7 @@ function handleLinePunchWithToken(params) {
       const data = JSON.parse(dataStr);
 
       if (data.done) {
-        return { ok: true, already: true, punchType: data.punchType, time: data.done.time, location: data.done.location };
+        return withPunchTimeFor_(data.userId, { ok: true, already: true, punchType: data.punchType, time: data.done.time, location: data.done.location });
       }
       if (new Date().getTime() > data.expiry) {
         props.deleteProperty(key);
@@ -271,7 +271,7 @@ function handleLinePunchWithToken(params) {
       if (recent) {
         const time = Utilities.formatDate(recent.time, Session.getScriptTimeZone(), 'HH:mm:ss');
         props.setProperty(key, JSON.stringify(Object.assign(data, { done: { time: time, location: locationCheck.locationName } })));
-        return { ok: true, already: true, punchType: punchType, time: time, location: locationCheck.locationName };
+        return withPunchTimeFor_(userId, { ok: true, already: true, punchType: punchType, time: time, location: locationCheck.locationName });
       }
 
       // 一天最多三組上下班（休息前要打卡），順序與次數見 PunchRules.gs
@@ -292,23 +292,24 @@ function handleLinePunchWithToken(params) {
       lock.releaseLock();
     }
 
-    // 推播 LINE 成功通知給本人
+    // 推播 LINE 成功通知給本人（打卡時間只有管理員看得到）
     try {
       const employee = findEmployeeByLineUserId_(userId);
       if (employee.ok) {
         const emoji = punchType === '上班' ? '🟢' : '🟠';
         const loc   = locationCheck.locationName || '';
+        const shownTime = canSeePunchTimes_(employee) ? result.time : '';
         const notifyResult = sendLineNotification_(userId, {
           type: 'flex',
           altText: emoji + ' ' + punchType + '打卡成功',
-          contents: createPunchSuccessMessage(employee.name, punchType, result.time, loc)
+          contents: createPunchSuccessMessage(employee.name, punchType, shownTime, loc)
         });
         if (!notifyResult.ok) {
           // Flex 失敗時改用純文字
           sendLineNotification_(userId, {
             type: 'text',
             text: emoji + ' ' + punchType + '打卡成功！\n👤 ' + employee.name +
-                  '\n⏰ ' + result.time + (loc ? '\n📍 ' + loc : '')
+                  (shownTime ? '\n⏰ ' + shownTime : '') + (loc ? '\n📍 ' + loc : '')
           });
         }
       }
@@ -316,18 +317,24 @@ function handleLinePunchWithToken(params) {
       Logger.log('LINE push 通知失敗（不影響打卡）: ' + notifyErr.message);
     }
 
-    return {
+    return withPunchTimeFor_(userId, {
       ok: true,
       punchType: punchType,
       time: result.time,
       location: locationCheck.locationName
-    };
+    });
 
   } catch (err) {
     Logger.log('handleLinePunchWithToken 錯誤: ' + err.message);
     // 附上原因：部署漏了檔案時（例如沒有 PunchRules.gs）畫面上就看得出是哪裡壞了
     return { ok: false, code: 'ERR_INTERNAL', msg: '系統錯誤，請稍後再試', detail: String(err.message || err).slice(0, 200) };
   }
+}
+
+/** LINE 打卡連結的回應：不是管理員就拿掉打卡時間 */
+function withPunchTimeFor_(userId, response) {
+  if (!canSeePunchTimes_(findEmployeeByLineUserId_(userId))) delete response.time;
+  return response;
 }
 
 /**
@@ -496,6 +503,82 @@ function handleGetAttendanceDetails(params) {
       code: "INTERNAL_ERROR",
       msg: error.message 
     };
+  }
+}
+
+/**
+ * 給員工看的出勤明細：拿掉每張卡的時間，改附上每天的工時（跟薪資用的是同一套算法）。
+ * 管理員不經過這裡，照樣看得到時間。
+ */
+function hidePunchTimesInDetails_(result, userId, month) {
+  if (!result || !result.ok || !Array.isArray(result.records)) return result;
+  const hoursByDate = {};
+  try {
+    getEmployeeMonthlyAttendanceInternal(String(userId || '').trim(), month).forEach(day => {
+      hoursByDate[day.date] = Number(day.workHours) || 0;
+    });
+  } catch (error) {
+    Logger.log('hidePunchTimesInDetails_ 算工時失敗: ' + error.message);
+  }
+  result.records.forEach(day => {
+    day.workHours = hoursByDate[day.date] || 0;
+    (day.record || []).forEach(r => { delete r.time; });
+  });
+  result.punchTimesHidden = true;
+  return result;
+}
+
+/**
+ * API：今天打卡到哪裡了（首頁的「已上班／已下班打卡」提醒）。不回傳時間。
+ * 大夜班跨午夜：今天的第一張是下班卡時，把前一天還沒下班的那張上班卡也算進來。
+ */
+function handleGetTodayPunchStatus(params) {
+  try {
+    const session = checkSession_(params.token);
+    if (!session.ok || !session.user) return { ok: false, code: 'ERR_SESSION_INVALID', msg: '未授權或 session 已過期' };
+    const userId = String(session.user.userId).trim();
+
+    const tz = Session.getScriptTimeZone();
+    const now = new Date();
+    const today = Utilities.formatDate(now, tz, 'yyyy-MM-dd');
+    const since = now.getTime() - 36 * 3600000;
+    const rows = getSheetValues_(SHEET_ATTENDANCE);
+    const punches = [];
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      if (String(row[1]).trim() !== userId || !row[0]) continue;
+      const time = row[0] instanceof Date ? row[0] : new Date(row[0]);
+      if (isNaN(time.getTime()) || time.getTime() < since || time > now) continue;
+      const type = String(row[4] || '').trim();
+      if (type !== '上班' && type !== '下班') continue;
+      const isAdjust = String(row[7] || '').trim() === '補打卡';
+      const audit = String(row[8] || '').trim();
+      if (isAdjust && audit === 'x') continue;   // 被駁回的補打卡不算
+      punches.push({ time: time, type: type, pending: isAdjust && audit !== 'v' });
+    }
+    punches.sort((a, b) => a.time - b.time);
+
+    let start = punches.findIndex(p => Utilities.formatDate(p.time, tz, 'yyyy-MM-dd') === today);
+    if (start === -1) {
+      // 今天還沒打卡，但昨晚上了班還沒下班（大夜班）：算在這一班裡
+      const last = punches[punches.length - 1];
+      start = last && last.type === '上班' && now - last.time < 16 * 3600000 ? punches.length - 1 : punches.length;
+    } else if (punches[start].type === '下班' && start > 0 && punches[start - 1].type === '上班') {
+      start -= 1;
+    }
+    const shift = punches.slice(start);
+    const last = shift[shift.length - 1];
+    return {
+      ok: true,
+      punchedIn: shift.some(p => p.type === '上班'),
+      punchedOut: shift.some(p => p.type === '下班'),
+      lastType: last ? last.type : '',
+      pairs: shift.filter(p => p.type === '上班').length,
+      pending: shift.some(p => p.pending)
+    };
+  } catch (error) {
+    Logger.log('handleGetTodayPunchStatus 錯誤: ' + error.message);
+    return { ok: false, msg: error.toString() };
   }
 }
 
@@ -1921,10 +2004,15 @@ function handleGetEmployeeMonthlyAttendance(params) {
     // 以前呼叫的是 getEmployeeMonthlyAttendance()：那支不收參數、回傳的是 ContentService 物件，
     // 前端拿到的 records 永遠是空的，薪資頁的「每日工時明細」一直顯示沒有資料
     const records = getEmployeeMonthlyAttendanceInternal(user.userId, yearMonth);
+    // 打卡時間只有管理員看得到：員工只拿到每天的工時
+    if (!canSeePunchTimes_(user)) {
+      records.forEach(day => { delete day.punchIn; delete day.punchOut; delete day.segments; });
+    }
     
     return {
       ok: true,
-      records: records
+      records: records,
+      punchTimesHidden: !canSeePunchTimes_(user)
     };
     
   } catch (error) {

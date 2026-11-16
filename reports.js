@@ -168,9 +168,11 @@ async function exportAttendanceReport(date) {
             const punchIn = record.record.find(r => r.type === '上班');
             const punchOut = record.record.find(r => r.type === '下班');
             
-            // 計算工時
+            // 計算工時（員工拿不到打卡時間，改用後端算好的每日工時）
             let workHours = '-';
-            if (punchIn && punchOut) {
+            if (res.punchTimesHidden) {
+                workHours = record.workHours > 0 ? Number(record.workHours).toFixed(2) : '-';
+            } else if (punchIn && punchOut) {
                 try {
                     const inTime = new Date(`${record.date} ${punchIn.time}`);
                     const outTime = new Date(`${record.date} ${punchOut.time}`);
@@ -194,9 +196,9 @@ async function exportAttendanceReport(date) {
             
             exportData.push({
                 '日期': record.date,
-                '上班時間': punchIn?.time || '-',
+                '上班時間': punchIn ? (punchIn.time || t('PUNCH_TIME_HIDDEN')) : '-',
                 '上班地點': punchIn?.location || '-',
-                '下班時間': punchOut?.time || '-',
+                '下班時間': punchOut ? (punchOut.time || t('PUNCH_TIME_HIDDEN')) : '-',
                 '下班地點': punchOut?.location || '-',
                 '工作時數': workHours,
                 '狀態': statusText,

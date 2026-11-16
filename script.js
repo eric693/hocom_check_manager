@@ -753,7 +753,11 @@ async function updateMonthlyStats(records) {
         
         let dayWorkHours = 0;
         
-        if (punchIn && punchOut) {
+        if (punchIn && punchOut && !punchIn.time && record.workHours !== undefined) {
+            // 員工看不到打卡時間，後端直接給當天工時
+            dayWorkHours = Math.round((Number(record.workHours) || 0) * 2) / 2;
+            totalWorkHours += dayWorkHours;
+        } else if (punchIn && punchOut) {
             try {
                 const inTime = new Date(`${record.date} ${punchIn.time}`);
                 const outTime = new Date(`${record.date} ${punchOut.time}`);
@@ -913,7 +917,7 @@ async function submitAdjustPunch(date, type, note) {
         });
         
         const res = await callApifetch(`adjustPunch&${params.toString()}`);
-        if (res.ok) clearMonthDataCache(); // 補打卡送出後，快取的月資料已過期
+        if (res.ok) { clearMonthDataCache(); loadTodayPunchStatus(); } // 補打卡送出後，快取的月資料已過期
         
         if (res.ok) {
             showNotification(t('NOTIF_ADJUST_PUNCH_SUBMITTED'), "success");
@@ -1161,7 +1165,7 @@ async function renderDailyRecords(dateKey) {
                                             <span class="${typeColor} font-bold text-sm">●</span>
                                             <div class="flex-1">
                                                 <p class="font-medium text-gray-800 dark:text-white">
-                                                    ${r.time} - <span data-i18n="${typeKey}">${t(typeKey)}</span>
+                                                    ${r.time ? `${r.time} - ` : ''}<span data-i18n="${typeKey}">${t(typeKey)}</span>${r.time ? '' : ` <span class="text-sm font-normal text-gray-500 dark:text-gray-400" data-i18n="PUNCH_TIME_HIDDEN">${t('PUNCH_TIME_HIDDEN')}</span>`}
                                                 </p>
                                                 <p class="text-sm text-gray-500 dark:text-gray-400">
                                                      ${r.location}
@@ -2217,7 +2221,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
                 
                 const res = await callApifetch(`adjustPunch&${params.toString()}`);
-                if (res.ok) clearMonthDataCache(); // 補打卡送出後，快取的月資料已過期
+                if (res.ok) { clearMonthDataCache(); loadTodayPunchStatus(); } // 補打卡送出後，快取的月資料已過期
                 console.log(' 前端提交補打卡:', {
                     type: type,
                     datetime: datetime,
@@ -2432,7 +2436,48 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.warn(' 找不到基本資料儲存按鈕');
     }
     if (typeof displayAnnouncements === 'function') displayAnnouncements();
+    loadTodayPunchStatus();
 });
+
+/**
+ * 首頁打卡區的「今天已上班／已下班打卡」提醒。不顯示時間（打卡時間只有管理員看得到）。
+ */
+async function loadTodayPunchStatus() {
+    const box = document.getElementById('today-punch-status');
+    if (!box || !localStorage.getItem('sessionToken')) return;
+    let res;
+    try {
+        res = await apiRequestJson('getTodayPunchStatus');
+    } catch (error) {
+        console.warn('載入今日打卡狀態失敗:', error);
+        return;
+    }
+    if (!res || !res.ok) return;
+
+    const chip = (done, doneKey, todoKey) => `
+        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold ${done
+            ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+            : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}">
+            ${done ? '✓' : '○'} ${escapeHtml(t(done ? doneKey : todoKey))}
+        </span>`;
+    let hint = '';
+    if (!res.punchedIn && !res.punchedOut) hint = t('TODAY_PUNCH_NONE');
+    else if (res.lastType === '上班') hint = t('TODAY_PUNCH_REMIND_OUT');
+    else if (res.lastType === '下班') hint = t('TODAY_PUNCH_DONE');
+    if (res.pending) hint += (hint ? '　' : '') + t('TODAY_PUNCH_PENDING');
+
+    // 兩頭班：第二組上班後，「下班」要等這一組的下班卡打了才算
+    const outDone = res.lastType === '下班';
+    box.innerHTML = `
+        <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">${escapeHtml(t('TODAY_PUNCH_TITLE'))}</p>
+        <div class="flex flex-wrap gap-2">
+            ${chip(res.punchedIn, 'TODAY_PUNCHED_IN', 'TODAY_NOT_PUNCHED_IN')}
+            ${chip(outDone, 'TODAY_PUNCHED_OUT', 'TODAY_NOT_PUNCHED_OUT')}
+            ${res.pairs > 1 ? `<span class="text-sm text-gray-500 dark:text-gray-400 self-center">${escapeHtml(t('TODAY_PUNCH_PAIRS', { count: res.pairs }))}</span>` : ''}
+        </div>
+        ${hint ? `<p class="text-xs text-gray-500 dark:text-gray-400 mt-2">${escapeHtml(hint)}</p>` : ''}`;
+    box.classList.remove('hidden');
+}
 
 /**
  * 初始化排班分頁
@@ -2766,6 +2811,7 @@ async function doPunch(type) {
 
         if (res.ok) {
             clearMonthDataCache(); // 打卡成功，出勤記錄的快取已經過期
+            loadTodayPunchStatus();
         }
 
         if (res.ok && type === '上班') {

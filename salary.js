@@ -380,7 +380,9 @@ async function loadDailyWorkHours(yearMonth) {
                 
                 const workHours = parseFloat(record.workHours) || 0;
                 // 一天可能有多組上下班（兩頭班休息前打卡）：每一段都列出來
-                const timeText = Array.isArray(record.segments) && record.segments.length
+                // 打卡時間只有管理員看得到：員工這裡只列日期和工時
+                const timeText = res.punchTimesHidden ? ''
+                    : Array.isArray(record.segments) && record.segments.length
                     ? record.segments.map(seg => `${seg.start} ~ ${seg.end}`).join('、')
                     : `${record.punchIn || '--'} ~ ${record.punchOut || '--'}`;
                 
@@ -2100,7 +2102,9 @@ async function loadPunchRecords(yearMonth) {
                 const workHours = parseFloat(record.workHours) || 0;
                 totalHours += workHours;
                 // 一天可能有多組上下班（兩頭班休息前打卡）：每一段都列出來
-                const timeText = Array.isArray(record.segments) && record.segments.length
+                // 打卡時間只有管理員看得到：員工這裡只列日期和工時
+                const timeText = res.punchTimesHidden ? ''
+                    : Array.isArray(record.segments) && record.segments.length
                     ? record.segments.map(seg => `${seg.start} ~ ${seg.end}`).join('、')
                     : `${record.punchIn || '--'} ~ ${record.punchOut || '--'}`;
                 

@@ -70,7 +70,7 @@ const DEPLOY_CHECKS = [
   ['Attachments.gs', () => typeof getAttachmentSheet_ === 'function'],
   ['AuditLog.gs', () => typeof logAdminAction_ === 'function' && typeof getSalaryAuditSheet_ === 'function' &&
                          typeof ADMIN_AUDIT_SUMMARY_KEYS !== 'undefined'],
-  ['Constants.gs', () => typeof getLeaveTypeInfo === 'function'],
+  ['Constants.gs', () => typeof getLeaveTypeInfo === 'function' && typeof canSeePunchTimes_ === 'function'],
   ['Dailysalary.gs', () => typeof calculateDailySalary === 'function'],
   ['DatabaseSetup.gs', () => typeof setupLeaveSystemDatabase === 'function'],
   ['DbOperations.gs', () => typeof isEmployeeRowMisaligned_ === 'function' && typeof deleteLocation === 'function' && punch.length >= 6 &&
@@ -82,11 +82,13 @@ const DEPLOY_CHECKS = [
   ['Handlers.gs', () => typeof handleDeleteLocation === 'function' && handleGetProfile.length >= 2 &&
                          String(handleLinePunchWithToken).indexOf('recentSamePunch_') !== -1 &&
                          typeof handleGetLoginUrl === 'function' && handleGetLoginUrl.length >= 1 &&
-                         String(handleLinePunchWithToken).indexOf('checkPunchSequence_') !== -1],
+                         String(handleLinePunchWithToken).indexOf('checkPunchSequence_') !== -1 &&
+                         typeof handleGetTodayPunchStatus === 'function' && typeof hidePunchTimesInDetails_ === 'function'],
   ['LeaveManagement.gs', () => typeof submitLeaveRequest === 'function'],
   ['LineApi.gs', () => typeof getLineUserInfo_ === 'function'],
   ['LineBotPunch.gs', () => typeof executePunch === 'function' && typeof sweepLinePunchTokens_ === 'function' &&
-                             String(determinePunchType).indexOf('nextPunchType_') !== -1],
+                             String(determinePunchType).indexOf('nextPunchType_') !== -1 &&
+                             String(sendTodayPunchRecords).indexOf('canSeePunchTimes_') !== -1],
   ['LineNotification.gs', () => typeof sendLineNotification_ === 'function' &&
                                  String(sendLineNotification_).indexOf('isLineUserId_') !== -1],
   ['LoginLinks.gs', () => typeof handleRedeemLoginLink === 'function' && typeof createSessionForUser_ === 'function' &&
@@ -210,8 +212,14 @@ function doGet(e) {
         return respond1(handleAdjustPunch(e.parameter));
       case "getAbnormalRecords":
         return respond1(handleGetAbnormalRecords(e.parameter));
-      case "getAttendanceDetails":
-        return respond1(handleGetAttendanceDetails(e.parameter));
+      case "getAttendanceDetails": {
+        const details = handleGetAttendanceDetails(e.parameter);
+        // 打卡時間只有管理員看得到（見 Constants.gs 的 canSeePunchTimes_）
+        return respond1(canSeePunchTimes_(requestUser) ? details
+          : hidePunchTimesInDetails_(details, e.parameter.userId, e.parameter.month));
+      }
+      case "getTodayPunchStatus":
+        return respond1(handleGetTodayPunchStatus(e.parameter));
       
       // ==================== 地點管理 ====================
       case "addLocation":

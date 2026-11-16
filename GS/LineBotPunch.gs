@@ -259,6 +259,11 @@ function sendMonthlyRecords(replyToken, userId, employeeName, yearMonth) {
     
     // 計算統計資訊
     const stats = calculateMonthlyStats(groupedRecords, userId, yearMonth);
+
+    // 打卡時間只有管理員看得到（工時統計上面已經算好了）
+    if (!canSeePunchTimes_(findEmployeeByLineUserId_(userId))) {
+      records.forEach(r => { r.time = PUNCH_TIME_HIDDEN_TEXT; });
+    }
     
     // 建立 Flex Message
     // 如果記錄太多（超過 10 天），使用 Carousel 分頁顯示
@@ -1407,7 +1412,7 @@ function sendPunchLocationRequest(replyToken, employeeName, punchType) {
  * 建立打卡成功訊息
  */
 function createPunchSuccessMessage(employeeName, punchType, time, location) {
-  return {
+  const bubble = {
     type: 'bubble',
     size: 'mega',
     header: {
@@ -1532,6 +1537,12 @@ function createPunchSuccessMessage(employeeName, punchType, time, location) {
       ]
     }
   };
+  // 員工看不到打卡時間（見 canSeePunchTimes_）：沒給時間就把「時間」那一列拿掉
+  if (!time) {
+    const rows = bubble.body.contents.find(c => c.type === 'box' && c.layout === 'vertical');
+    if (rows) rows.contents = rows.contents.filter(row => !(row.contents && row.contents[0] && row.contents[0].text === '時間'));
+  }
+  return bubble;
 }
 
 /**
@@ -1640,6 +1651,10 @@ function sendTodayPunchRecords(replyToken, userId, employeeName) {
     if (records.length === 0) {
       replyMessage(replyToken, `${employeeName}，您今天還沒有打卡記錄\n\n請傳送「打卡」開始打卡`);
       return;
+    }
+    // 打卡時間只有管理員看得到，員工只看到哪幾張卡打過了
+    if (!canSeePunchTimes_(findEmployeeByLineUserId_(userId))) {
+      records.forEach(r => { r.time = PUNCH_TIME_HIDDEN_TEXT; });
     }
     
     // 建立記錄訊息
