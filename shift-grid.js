@@ -23,6 +23,7 @@ const GRID_LEAVE_COLOR = { bg: '#f3f4f6', fg: '#6b7280', dot: '#9ca3af' };
 
 let gridWeekStart = null;        // 這一週的星期一（Date，當地時間）
 let gridShifts = [];
+let gridPunches = {};            // 實際打卡：{ 員工ID: { 'yyyy-MM-dd': [{ in, out, pending }] } }，只有管理員有
 let gridHolidays = [];
 let gridLoading = 0;
 
@@ -100,7 +101,8 @@ async function initShiftGrid() {
     const apply = document.getElementById('grid-apply-pattern');
     apply.onclick = applyPatternToGridWeek;
     apply.style.display = gridCanEdit() ? '' : 'none';
-    document.getElementById('grid-hint').textContent = t(gridCanEdit() ? 'GRID_HINT_EDIT' : 'GRID_HINT_VIEW');
+    document.getElementById('grid-hint').textContent = t(gridCanEdit() ? 'GRID_HINT_EDIT' : 'GRID_HINT_VIEW') +
+        (gridShowsPunches() ? ' ' + t('GRID_HINT_PUNCHES') : '');
     loadGridHolidays().then(() => renderShiftGrid());
     await loadShiftGrid();
 }
@@ -124,13 +126,14 @@ async function loadShiftGrid() {
     try {
         if (typeof employeesReady !== 'undefined') await employeesReady;
         const query = new URLSearchParams({ startDate: toLocalDateStr(dates[0]), endDate: toLocalDateStr(dates[6]) }).toString();
-        const data = await apiRequestJson(`getShifts&${query}`);
+        const [data, punches] = await Promise.all([apiRequestJson(`getShifts&${query}`), loadGridPunches(dates)]);
         if (ticket !== gridLoading) return;   // 使用者已經換到別週
         if (!data.ok) {
             showMessage(data.msg || t('SHIFT_LOAD_FAILED'), 'error');
             return;
         }
         gridShifts = data.data || [];
+        gridPunches = punches;
         renderShiftGrid();
     } catch (error) {
         console.error('載入週排班失敗:', error);
@@ -138,6 +141,114 @@ async function loadShiftGrid() {
     } finally {
         if (ticket === gridLoading) table.classList.remove('grid-busy');
     }
+}
+
+// ==================== 實際打卡（只有管理員） ====================
+
+/** 打卡時間只有管理員看得到（跟後端 canSeePunchTimes_ 一致），排班人員和員工不載入 */
+function gridShowsPunches() {
+    return typeof isAdmin !== 'undefined' && isAdmin;
+}
+
+/**
+ * 讀這一週的實際打卡，配成「上班 → 下班」一段一段。
+ * 多讀前後各一天：週一凌晨下班的大夜班、週日晚上上班隔天才下班的，都配得起來。
+ * 一段算在上班那天；被駁回的補打卡不算，審核中的標記出來。
+ */
+async function loadGridPunches(dates) {
+    if (!gridShowsPunches()) return {};
+    const from = new Date(dates[0]); from.setDate(from.getDate() - 1);
+    const to = new Date(dates[6]); to.setDate(to.getDate() + 1);
+    try {
+        const query = new URLSearchParams({ startDate: toLocalDateStr(from), endDate: toLocalDateStr(to) }).toString();
+        const data = await apiRequestJson(`adminListPunches&${query}`, { allowRetry: true, timeoutMs: 45000 });
+        return data.ok ? pairGridPunches(data.records || []) : {};
+    } catch (error) {
+        console.warn('載入實際打卡失敗:', error);
+        return {};
+    }
+}
+
+function pairGridPunches(records) {
+    const at = rec => new Date(`${rec.date}T${rec.time}`).getTime();
+    const byUser = {};
+    records.filter(rec => rec.status !== 'ADJUST_REJECTED' && rec.status !== 'VIRTUAL').forEach(rec => {
+        (byUser[rec.userId] = byUser[rec.userId] || []).push(rec);
+    });
+    const result = {};
+    Object.keys(byUser).forEach(uid => {
+        const days = result[uid] = {};
+        const push = (inRec, outRec) => {
+            const date = (inRec || outRec).date;
+            (days[date] = days[date] || []).push({
+                in: inRec ? inRec.time : '',
+                out: outRec ? outRec.time : '',
+                outDate: outRec ? outRec.date : '',
+                pending: [inRec, outRec].some(r => r && r.status === 'ADJUST_PENDING')
+            });
+        };
+        let open = null;
+        byUser[uid].sort((a, b) => at(a) - at(b)).forEach(rec => {
+            if (rec.type === '上班') {
+                if (open) push(open, null);
+                open = rec;
+            } else if (rec.type === '下班') {
+                if (open && at(rec) - at(open) <= 86400000) push(open, rec);
+                else { if (open) push(open, null); push(null, rec); }
+                open = null;
+            }
+        });
+        if (open) push(open, null);
+    });
+    return result;
+}
+
+const gridMinutesOf = time => {
+    const m = /^(\d{1,2}):(\d{2})/.exec(time || '');
+    return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+};
+
+/**
+ * 一格裡的實際打卡。跟這天的班比：上班晚於表定 → 遲到，下班早於表定 → 早退，少一張卡 → 標出來。
+ */
+function gridPunchHtml(segments, shifts, date) {
+    if (!segments || !segments.length) return '';
+    const timed = shifts.filter(s => {
+        const st = formatTimeOnly(s.startTime), en = formatTimeOnly(s.endTime);
+        return st && !(st === '00:00' && en === '00:00');
+    });
+    return segments.map((seg, i) => {
+        const shift = timed[i] || null;   // 第 n 段對第 n 個班（兩頭班）
+        const flags = [];
+        if (!seg.in) flags.push({ key: 'GRID_PUNCH_NO_IN', bad: true });
+        if (!seg.out) flags.push({ key: 'GRID_PUNCH_NO_OUT', bad: true });
+        if (shift && seg.in) {
+            const late = gridMinutesOf(seg.in) - gridMinutesOf(formatTimeOnly(shift.startTime));
+            if (late > 0) flags.push({ key: 'GRID_PUNCH_LATE', minutes: late });
+        }
+        if (shift && seg.out && (!seg.outDate || seg.outDate === date)) {
+            const early = gridMinutesOf(formatTimeOnly(shift.endTime)) - gridMinutesOf(seg.out);
+            const crossesMidnight = gridMinutesOf(formatTimeOnly(shift.endTime)) <= gridMinutesOf(formatTimeOnly(shift.startTime));
+            if (early > 0 && !crossesMidnight) flags.push({ key: 'GRID_PUNCH_EARLY', minutes: early });
+        }
+        if (!shift && !timed.length) flags.push({ key: 'GRID_PUNCH_NO_SHIFT' });
+        if (seg.pending) flags.push({ key: 'GRID_PUNCH_PENDING' });
+
+        const nextDay = seg.outDate && seg.outDate !== date ? t('GRID_PUNCH_NEXT_DAY') : '';
+        const timeText = `${seg.in || '--:--'}–${nextDay}${seg.out || '--:--'}`;
+        const level = flags.some(f => f.bad) ? 'bad' : flags.some(f => f.minutes || f.key === 'GRID_PUNCH_NO_SHIFT') ? 'warn' : 'ok';
+        const flagText = flags.map(f => t(f.key, { minutes: f.minutes })).join('、');
+        return `<span class="grid-punch grid-punch-${level}" title="${escapeHtml(t('GRID_PUNCH_ACTUAL') + ' ' + timeText + (flagText ? '（' + flagText + '）' : ''))}">
+            <span class="grid-punch-time">${level === 'ok' ? '✓' : '!'} ${escapeHtml(timeText)}</span>${flagText ? `<span class="grid-punch-flag">${escapeHtml(flagText)}</span>` : ''}</span>`;
+    }).join('');
+}
+
+/** 員工名字連到資料管理的「工時明細」：這個月每天的工時和薪資（薪資就是照這些打卡算的） */
+function gridMonthLink(emp) {
+    if (!gridShowsPunches() || !gridWeekStart) return '';
+    const month = toLocalDateStr(gridWeekStart).slice(0, 7);
+    const href = `records.html?tab=hours&employee=${encodeURIComponent(emp.userId)}&month=${month}`;
+    return `<a class="grid-month-link" href="${href}">${escapeHtml(t('GRID_MONTH_PAY_LINK'))}</a>`;
 }
 
 function renderShiftGrid() {
@@ -170,11 +281,12 @@ function renderShiftGrid() {
                 const time = start && !(start === '00:00' && end === '00:00') ? `<span class="grid-chip-time">${escapeHtml(start)}–${escapeHtml(end)}</span>` : '';
                 return `<span class="grid-chip" style="background:${c.bg};color:${c.fg}"><span class="grid-chip-name">${escapeHtml(s.shiftType)}</span>${time}</span>`;
             }).join('');
-            const cls = ['grid-cell', editable ? 'grid-editable' : '', ds === today ? 'grid-today' : '', mine.length ? '' : 'grid-empty'].join(' ');
+            const punched = gridPunchHtml((gridPunches[emp.userId] || {})[ds], mine, ds);
+            const cls = ['grid-cell', editable ? 'grid-editable' : '', ds === today ? 'grid-today' : '', mine.length || punched ? '' : 'grid-empty'].join(' ');
             const label = t('GRID_CELL_LABEL', { name: emp.name, date: `${dates[i].getMonth() + 1}/${dates[i].getDate()}` });
-            return `<td class="${cls}" data-emp="${escapeHtml(emp.userId)}" data-date="${ds}"${editable ? ` tabindex="0" role="button" aria-label="${escapeHtml(label)}"` : ''}>${chips || (editable ? '<span class="grid-plus">＋</span>' : '')}</td>`;
+            return `<td class="${cls}" data-emp="${escapeHtml(emp.userId)}" data-date="${ds}"${editable ? ` tabindex="0" role="button" aria-label="${escapeHtml(label)}"` : ''}>${chips}${punched}${chips || punched ? '' : (editable ? '<span class="grid-plus">＋</span>' : '')}</td>`;
         }).join('');
-        return `<tr><th class="grid-name" scope="row">${escapeHtml(emp.name)}</th>${cells}<td class="grid-total">${weekMinutes ? escapeHtml(t('RECORDS_HOURS_SHORT', { hours: formatWorkHours(weekMinutes) })) : '—'}</td></tr>`;
+        return `<tr><th class="grid-name" scope="row">${escapeHtml(emp.name)}${gridMonthLink(emp)}</th>${cells}<td class="grid-total">${weekMinutes ? escapeHtml(t('RECORDS_HOURS_SHORT', { hours: formatWorkHours(weekMinutes) })) : '—'}</td></tr>`;
     }).join('');
 
     table.innerHTML = `

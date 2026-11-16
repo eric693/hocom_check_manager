@@ -112,6 +112,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('hr-print').addEventListener('click', () => window.print());
 
     await Promise.all([loadEmployeeOptions(), loadLocationOptions()]);
+
+    // 從排班表點過來：records.html?tab=hours&employee=…&month=yyyy-MM，直接打開那個人那個月的工時明細
+    const link = new URLSearchParams(location.search);
+    if (link.get('tab') === 'hours') {
+        const month = link.get('month') || '';
+        if (/^\d{4}-\d{2}$/.test(month)) document.getElementById('hr-month').value = month;
+        const employee = document.getElementById('hr-employee');
+        if ([...employee.options].some(o => o.value === link.get('employee'))) employee.value = link.get('employee');
+        switchRecordsTab('hours');   // 切過去就會查詢
+        return;
+    }
     loadPunches();
 });
 
