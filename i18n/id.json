@@ -209,6 +209,8 @@
   "RECORDS_LOAD_FAILED": "Gagal memuat data",
   "RECORDS_PUNCH_COUNT": "{count} catatan",
   "RECORDS_NO_PUNCHES": "Tidak ada riwayat absen pada periode ini",
+  "GRID_HINT_PUNCHES_SCHEDULER": "Kotak bergaris putus-putus adalah absen sebenarnya (hanya admin dan penyusun jadwal).",
+  "SALARY_LATE_EARLY_DEDUCT": "Potongan terlambat / pulang cepat",
   "GRID_HINT_PUNCHES": "Kotak bergaris putus-putus adalah absen sebenarnya (hanya admin). Klik tautan di bawah nama untuk melihat jam kerja dan gaji bulan ini.",
   "GRID_PUNCH_ACTUAL": "Absen sebenarnya",
   "GRID_PUNCH_LATE": "Terlambat {minutes} menit",

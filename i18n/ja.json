@@ -209,6 +209,8 @@
   "RECORDS_LOAD_FAILED": "データを読み込めませんでした",
   "RECORDS_PUNCH_COUNT": "{count} 件",
   "RECORDS_NO_PUNCHES": "この期間の打刻記録はありません",
+  "GRID_HINT_PUNCHES_SCHEDULER": "点線の枠は実際の打刻です（管理者とシフト担当者のみ表示）。",
+  "SALARY_LATE_EARLY_DEDUCT": "遅刻・早退控除",
   "GRID_HINT_PUNCHES": "点線の枠は実際の打刻です（管理者のみ表示）。名前の下のリンクで今月の勤務時間と給与を確認できます。",
   "GRID_PUNCH_ACTUAL": "実際の打刻",
   "GRID_PUNCH_LATE": "遅刻 {minutes} 分",

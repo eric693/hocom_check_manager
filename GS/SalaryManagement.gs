@@ -2184,7 +2184,7 @@ function calculateMonthlySalaryInternal(employeeId, yearMonth) {
     
     // 4. 基本薪資
     const baseSalary = parseFloat(config['基本薪資']) || 0;
-    const hourlyRate = Math.round(baseSalary / 30 / 8); // 平日時薪（早退扣款用）
+    const hourlyRate = Math.round(baseSalary / 30 / 8); // 平日時薪（加班費時薪的預設值）
     
     // 5. 固定津貼
     const positionAllowance = parseFloat(config['職務加給']) || 0;
@@ -2328,70 +2328,20 @@ function calculateMonthlySalaryInternal(employeeId, yearMonth) {
     Logger.log(`   - 國定假日出勤薪資: $${holidayWorkPay}`);
     Logger.log(`   - 國定假日加班費: $${holidayOvertimePay}`);
     
-    // 6.5 ⭐⭐⭐ 早退扣款（僅月薪員工）- 修正版
-    let earlyLeaveDeduction = 0;
-
-    Logger.log(`\n 開始計算早退扣款...`);
-
-    // 取得該月份的打卡記錄
+    // 6.5 遲到、早退扣款（月薪員工）：按分鐘比例扣，每分鐘 = 基本薪資 ÷ 30 ÷ 8 ÷ 60。
+    //     存在「早退扣款」欄（欄名不改，舊薪資單才對得上）。怎麼算遲到早退見 PayrollRules.gs 的 computeLateEarlyMinutes_。
+    //     以前只比下班卡，而且把 12 點前結束的班都當成跨日班，早上的班會被誤扣。
     const attendanceRecords = getEmployeeMonthlyAttendanceInternal(employeeId, yearMonth);
-
-    // 整月排班一次讀進來。以前是每個打卡日都呼叫 getEmployeeShiftForDate()，
-    // 而那支每次都會把整張排班表讀一遍 —— 22 個工作天就是 22 次全表讀取。
+    // 整月排班一次讀進來（以前每個打卡日都把整張排班表讀一遍）
     const shiftMap = (typeof getEmployeeShiftMapForMonth === 'function')
       ? getEmployeeShiftMapForMonth(employeeId, yearMonth)
       : {};
+    const lateEarly = computeLateEarlyMinutes_(attendanceRecords, shiftMap, leaveDatesFromRecords_(leaveRecords));
+    const lateEarlyMinutes = lateEarly.lateMinutes + lateEarly.earlyMinutes;
+    const earlyLeaveDeduction = Math.round(baseSalary / 30 / 8 / 60 * lateEarlyMinutes);
+    lateEarly.days.forEach(d => Logger.log(`   ${d.date}: 遲到 ${d.late} 分、早退 ${d.early} 分`));
+    Logger.log(` 遲到 ${lateEarly.lateMinutes} 分、早退 ${lateEarly.earlyMinutes} 分 → 扣款 $${earlyLeaveDeduction}`);
 
-    attendanceRecords.forEach(record => {
-      const date = record.date;
-      
-      // ⭐⭐⭐ 使用 try-catch 避免錯誤中斷流程
-      try {
-        const shift = shiftMap[date];
-        
-        if (shift) {
-          const scheduledEndTime = shift.endTime;
-          const actualEndTime = record.punchOut;
-          
-          if (scheduledEndTime && actualEndTime) {
-            // 解析時間（處理跨日班）
-            const [schedHour, schedMin] = scheduledEndTime.split(':').map(Number);
-            const [actualHour, actualMin] = actualEndTime.split(':').map(Number);
-            
-            // 轉換為分鐘數（跨日班需要特殊處理）
-            let schedMinutes = schedHour * 60 + schedMin;
-            let actualMinutes = actualHour * 60 + actualMin;
-            
-            // 如果是跨日班（下班時間 < 上班時間），下班時間加24小時
-            if (schedHour < 12) {
-              schedMinutes += 24 * 60;
-            }
-            
-            if (actualHour < 12 && record.punchIn && record.punchIn.startsWith('1')) {
-              actualMinutes += 24 * 60;
-            }
-            
-            // 計算早退分鐘數
-            if (actualMinutes < schedMinutes) {
-              const earlyMinutes = schedMinutes - actualMinutes;
-              const earlyHours = earlyMinutes / 60;
-              const deduction = Math.round(hourlyRate * earlyHours);
-              
-              earlyLeaveDeduction += deduction;
-              
-              Logger.log(`   ${date}: 早退 ${earlyMinutes} 分鐘 (${earlyHours.toFixed(2)}h) → 扣款 $${deduction}`);
-            }
-          }
-        }
-      } catch (shiftError) {
-        // 如果取得排班失敗，記錄警告但繼續處理
-        Logger.log(`    ${date}: 無法取得排班資訊，跳過早退檢查`);
-      }
-    });
-
-    Logger.log(`\n 早退扣款統計:`);
-    Logger.log(`   合計扣款: $${earlyLeaveDeduction}`);
-    
     // 7. 請假扣款
     let leaveDeduction = 0;
     let sickLeaveHours = 0;       
@@ -2594,7 +2544,7 @@ function calculateMonthlySalaryInternal(employeeId, yearMonth) {
         (holidayCompHours > 0 ? `，國定假日補休${holidayCompHours.toFixed(1)}h` : '') +
         (sickLeaveHours > 0 ? `，病假${sickLeaveHours}h(半薪)` : '') +
         (personalLeaveHours > 0 ? `，事假${personalLeaveHours}h` : '') +
-        (earlyLeaveDeduction > 0 ? `，早退扣款$${earlyLeaveDeduction}` : '')
+        (earlyLeaveDeduction > 0 ? `，遲到${lateEarly.lateMinutes}分、早退${lateEarly.earlyMinutes}分，扣款$${earlyLeaveDeduction}` : '')
     };
     
     Logger.log(' 月薪計算完成');

@@ -102,7 +102,7 @@ async function initShiftGrid() {
     apply.onclick = applyPatternToGridWeek;
     apply.style.display = gridCanEdit() ? '' : 'none';
     document.getElementById('grid-hint').textContent = t(gridCanEdit() ? 'GRID_HINT_EDIT' : 'GRID_HINT_VIEW') +
-        (gridShowsPunches() ? ' ' + t('GRID_HINT_PUNCHES') : '');
+        (gridShowsPunches() ? ' ' + t(isAdmin ? 'GRID_HINT_PUNCHES' : 'GRID_HINT_PUNCHES_SCHEDULER') : '');
     loadGridHolidays().then(() => renderShiftGrid());
     await loadShiftGrid();
 }
@@ -145,9 +145,9 @@ async function loadShiftGrid() {
 
 // ==================== 實際打卡（只有管理員） ====================
 
-/** 打卡時間只有管理員看得到（跟後端 canSeePunchTimes_ 一致），排班人員和員工不載入 */
+/** 打卡時間只有管理員和排班人員看得到（跟後端 canSeePunchTimes_ 一致），一般員工不載入 */
 function gridShowsPunches() {
-    return typeof isAdmin !== 'undefined' && isAdmin;
+    return typeof isAdmin !== 'undefined' && (isAdmin || isScheduler);
 }
 
 /**
@@ -161,7 +161,7 @@ async function loadGridPunches(dates) {
     const to = new Date(dates[6]); to.setDate(to.getDate() + 1);
     try {
         const query = new URLSearchParams({ startDate: toLocalDateStr(from), endDate: toLocalDateStr(to) }).toString();
-        const data = await apiRequestJson(`adminListPunches&${query}`, { allowRetry: true, timeoutMs: 45000 });
+        const data = await apiRequestJson(`getGridPunches&${query}`, { allowRetry: true, timeoutMs: 45000 });
         return data.ok ? pairGridPunches(data.records || []) : {};
     } catch (error) {
         console.warn('載入實際打卡失敗:', error);
@@ -243,9 +243,9 @@ function gridPunchHtml(segments, shifts, date) {
     }).join('');
 }
 
-/** 員工名字連到資料管理的「工時明細」：這個月每天的工時和薪資（薪資就是照這些打卡算的） */
+/** 員工名字連到資料管理的「工時明細」：這個月每天的工時和薪資。資料管理頁只有管理員能開 */
 function gridMonthLink(emp) {
-    if (!gridShowsPunches() || !gridWeekStart) return '';
+    if (typeof isAdmin === 'undefined' || !isAdmin || !gridWeekStart) return '';
     const month = toLocalDateStr(gridWeekStart).slice(0, 7);
     const href = `records.html?tab=hours&employee=${encodeURIComponent(emp.userId)}&month=${month}`;
     return `<a class="grid-month-link" href="${href}">${escapeHtml(t('GRID_MONTH_PAY_LINK'))}</a>`;

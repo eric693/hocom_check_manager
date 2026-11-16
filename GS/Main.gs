@@ -70,7 +70,8 @@ const DEPLOY_CHECKS = [
   ['Attachments.gs', () => typeof getAttachmentSheet_ === 'function'],
   ['AuditLog.gs', () => typeof logAdminAction_ === 'function' && typeof getSalaryAuditSheet_ === 'function' &&
                          typeof ADMIN_AUDIT_SUMMARY_KEYS !== 'undefined'],
-  ['Constants.gs', () => typeof getLeaveTypeInfo === 'function' && typeof canSeePunchTimes_ === 'function'],
+  ['Constants.gs', () => typeof getLeaveTypeInfo === 'function' && typeof canSeePunchTimes_ === 'function' &&
+                          typeof PUNCH_TIME_ROLES !== 'undefined'],
   ['Dailysalary.gs', () => typeof calculateDailySalary === 'function'],
   ['DatabaseSetup.gs', () => typeof setupLeaveSystemDatabase === 'function'],
   ['DbOperations.gs', () => typeof isEmployeeRowMisaligned_ === 'function' && typeof deleteLocation === 'function' && punch.length >= 6 &&
@@ -95,14 +96,17 @@ const DEPLOY_CHECKS = [
                            typeof bindLineAccount_ === 'function'],
   ['Offboarding.gs', () => typeof handleOffboardEmployee === 'function'],
   ['OvertimeOperations.gs', () => typeof initOvertimeSheet === 'function'],
-  ['PayrollRules.gs', () => typeof applyPayrollRules_ === 'function' && typeof payrollAttendanceZh_ === 'function'],
+  ['PayrollRules.gs', () => typeof applyPayrollRules_ === 'function' && typeof payrollAttendanceZh_ === 'function' &&
+                             typeof computeLateEarlyMinutes_ === 'function'],
   ['PunchRules.gs', () => typeof checkPunchSequence_ === 'function' && typeof computeDayWorkFromPunches_ === 'function' &&
                            typeof recentSamePunch_ === 'function' && PUNCH_MAX_PER_TYPE === 3],
   ['QrPunch.gs', () => typeof qrPunch === 'function' && String(qrPunch).indexOf('checkPunchSequence_') !== -1],
   ['RecordsAdmin.gs', () => typeof handleAdminUpdatePunch === 'function' && typeof handleAdminUpdateSheetRow === 'function' &&
-                           typeof handleAdminMonthlyHours === 'function' && typeof handleDeleteSalaryRecord === 'function'],
+                           typeof handleAdminMonthlyHours === 'function' && typeof handleDeleteSalaryRecord === 'function' &&
+                           typeof handleGetGridPunches === 'function'],
   ['SalaryManagement.gs', () => typeof calculateMonthlySalary === 'function' && calculateMonthlySalary.length >= 3 &&
-                               String(calculateHourlySalary).indexOf('computeShiftPayForMonth_') !== -1],
+                               String(calculateHourlySalary).indexOf('computeShiftPayForMonth_') !== -1 &&
+                               String(calculateMonthlySalaryInternal).indexOf('computeLateEarlyMinutes_') !== -1],
   ['SalaryTools.gs', () => typeof listPayableEmployees_ === 'function'],
   ['ShiftPay.gs', () => typeof computeShiftPay_ === 'function' && typeof handleSaveShiftPayConfig === 'function'],
   ['ShiftManagement.gs', () => typeof shiftRowBreakMinutes_ === 'function' && String(updateShift).indexOf('updateData.employeeId') !== -1],
@@ -341,6 +345,8 @@ function doGet(e) {
         return respond1(handleSaveShiftTemplates(e.parameter));
       case "adminListPunches":
         return respond1(handleAdminListPunches(e.parameter));
+      case "getGridPunches":
+        return respond1(handleGetGridPunches(e.parameter));
       case "adminAddPunch":
         return respond1(handleAdminAddPunch(e.parameter));
       case "adminUpdatePunch":

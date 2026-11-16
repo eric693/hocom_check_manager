@@ -101,11 +101,44 @@ function handleAdminListPunches(params) {
     if ((end - start) / 86400000 > RECORDS_MAX_DAYS) {
       return { ok: false, code: 'RECORDS_RANGE', msg: `一次最多查 ${RECORDS_MAX_DAYS} 天` };
     }
+    return { ok: true, records: listPunchRecords_(start, end, params.employeeId) };
+  } catch (error) {
+    Logger.log(' handleAdminListPunches 錯誤: ' + error.message);
+    return { ok: false, msg: error.toString() };
+  }
+}
+
+/**
+ * API：排班表用的打卡紀錄（管理員、排班人員；見 Constants.gs 的 canSeePunchTimes_）。只能讀，最多 10 天。
+ * 參數：startDate、endDate（yyyy-MM-dd）
+ */
+function handleGetGridPunches(params) {
+  try {
+    const session = checkSession_(params.token);
+    if (!session.ok || !session.user) return { ok: false, code: 'ERR_SESSION_INVALID', msg: '未授權或 session 已過期' };
+    if (!canSeePunchTimes_(session.user)) return { ok: false, code: 'PERMISSION_DENIED', msg: '需要管理員或排班人員權限' };
+    const start = parsePunchDateTime_(params.startDate, '00:00');
+    const end = parsePunchDateTime_(params.endDate, '23:59');
+    if (!start || !end || start > end || (end - start) / 86400000 > 10) {
+      return { ok: false, code: 'RECORDS_DATE', msg: '請選擇正確的日期範圍（最多 10 天）' };
+    }
+    const records = listPunchRecords_(start, end, '').map(r => ({
+      date: r.date, time: r.time, userId: r.userId, type: r.type, status: r.status
+    }));
+    return { ok: true, records: records };
+  } catch (error) {
+    Logger.log(' handleGetGridPunches 錯誤: ' + error.message);
+    return { ok: false, msg: error.toString() };
+  }
+}
+
+/** 讀一段期間的打卡紀錄（含 end 那一整分鐘），employeeId 空白 = 全部 */
+function listPunchRecords_(start, end, employeeIdParam) {
     const endMs = end.getTime() + 59999;   // 含 23:59 這一整分鐘
 
     const tz = Session.getScriptTimeZone();
     const nameMap = getEmployeeNameMap_();
-    const employeeId = String(params.employeeId || '').trim();
+    const employeeId = String(employeeIdParam || '').trim();
     const data = SpreadsheetApp.getActive().getSheetByName(SHEET_ATTENDANCE).getDataRange().getValues();
     const records = [];
 
@@ -132,11 +165,7 @@ function handleAdminListPunches(params) {
     }
 
     records.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time) || a.name.localeCompare(b.name));
-    return { ok: true, records: records };
-  } catch (error) {
-    Logger.log(' handleAdminListPunches 錯誤: ' + error.message);
-    return { ok: false, msg: error.toString() };
-  }
+    return records;
 }
 
 function validatePunchInput_(params) {

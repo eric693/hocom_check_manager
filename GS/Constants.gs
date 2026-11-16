@@ -323,11 +323,12 @@ const SYSTEM_VERSION = {
 };
 
 // ==================== 打卡時間的可見範圍 ====================
-// 上下班打卡的時間只有管理員看得到（後台、資料管理頁）。員工在網頁和 LINE 只看到「已打卡」，
-// 工時照常顯示。
+// 上下班打卡的時間只有管理員和排班人員看得到（後台、資料管理頁、排班表）。
+// 一般員工在網頁和 LINE 只看到「已打卡」，工時照常顯示。
 const PUNCH_TIME_HIDDEN_TEXT = '已打卡';
+const PUNCH_TIME_ROLES = ['管理員', '排班人員'];
 
 /** 這個人看得到打卡時間嗎？傳 session 的 user 或 findEmployeeByLineUserId_ 的結果都可以 */
 function canSeePunchTimes_(user) {
-  return !!(user && user.dept === '管理員');
+  return !!(user && PUNCH_TIME_ROLES.indexOf(user.dept) !== -1);
 }

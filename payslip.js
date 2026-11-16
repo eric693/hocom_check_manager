@@ -165,7 +165,7 @@ function buildPayslipHtml(data) {
         [t('SALARY_PENSION'), data.pensionSelf],
         [t('SALARY_TAX'), data.incomeTax],
         [t('SALARY_LEAVE_DEDUCT'), data.leaveDeduction],
-        [t('SALARY_EARLY_LEAVE_DEDUCT'), data.earlyLeaveDeduction || data['早退扣款']],
+        [t('SALARY_LATE_EARLY_DEDUCT'), data.earlyLeaveDeduction || data['早退扣款']],
         [t('SALARY_WELFARE_FEE_LABEL'), data.welfareFee],
         [t('SALARY_DORMITORY_FEE_LABEL'), data.dormitoryFee],
         [t('SALARY_GROUP_INSURANCE_LABEL'), data.groupInsurance],

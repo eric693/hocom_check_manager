@@ -222,6 +222,8 @@
   "RECORDS_LOAD_FAILED": "Không tải được dữ liệu",
   "RECORDS_PUNCH_COUNT": "Tổng {count} lượt",
   "RECORDS_NO_PUNCHES": "Không có dữ liệu chấm công trong khoảng này",
+  "GRID_HINT_PUNCHES_SCHEDULER": "Ô viền nét đứt là giờ chấm công thực tế (chỉ quản trị viên và người xếp ca thấy).",
+  "SALARY_LATE_EARLY_DEDUCT": "Khấu trừ đi trễ / về sớm",
   "GRID_HINT_PUNCHES": "Ô viền nét đứt là giờ chấm công thực tế (chỉ quản trị viên thấy). Bấm liên kết dưới tên để xem giờ làm và lương tháng này.",
   "GRID_PUNCH_ACTUAL": "Chấm công thực tế",
   "GRID_PUNCH_LATE": "Trễ {minutes} phút",

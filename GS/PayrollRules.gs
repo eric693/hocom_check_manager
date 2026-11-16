@@ -126,6 +126,67 @@ function payrollScheduledMinutes_(shift) {
   return calcShiftMinutes_(shift.startTime, shift.endTime, false, Number(shift.breakMinutes) || 0).workMinutes;
 }
 
+// ==================== 遲到、早退分鐘（月薪扣款用） ====================
+
+/**
+ * 每天比對排班和實際打卡，算出遲到、早退的分鐘數。
+ *   遲到 = 當天第一張上班卡晚於排班上班時間的分鐘
+ *   早退 = 當天最後一張下班卡早於排班下班時間的分鐘（跨午夜的班，下班時間算到隔天）
+ * 不算的情況：沒排班或休假、當天有核准的請假（請假已經另外扣）、少了上班卡（忘了打卡交給全勤規則處理）、
+ * 差距 12 小時以上（多半是跨日班的卡被分到隔天，不是真的遲到早退）。
+ *
+ * @param {Array} attendance  getEmployeeMonthlyAttendanceInternal 的結果
+ * @param {Object} shiftMap   getEmployeeShiftMapForMonth 的結果（日期 → 排班）
+ * @param {Object} skipDates  不算的日期（請假），{ 'yyyy-MM-dd': true }
+ * @returns {{ lateMinutes: number, earlyMinutes: number, days: Array<{date, late, early}> }}
+ */
+function computeLateEarlyMinutes_(attendance, shiftMap, skipDates) {
+  const days = [];
+  let lateMinutes = 0, earlyMinutes = 0;
+  (attendance || []).forEach(r => {
+    if (!r || (skipDates && skipDates[r.date])) return;
+    const shift = shiftMap && shiftMap[r.date];
+    if (!payrollScheduledMinutes_(shift)) return;
+    const start = payrollTimeToMinutes_(shift.startTime);
+    let end = payrollTimeToMinutes_(shift.endTime);
+    if (end <= start) end += 24 * 60;   // 跨午夜的班
+
+    const segs = (r.segments && r.segments.length) ? r.segments : [];
+    const firstIn = payrollTimeToMinutes_(segs.length ? segs[0].start : r.punchIn);
+    if (firstIn === null) return;
+    let lastOut = payrollTimeToMinutes_(segs.length ? segs[segs.length - 1].end : r.punchOut);
+    if (lastOut !== null && end > 24 * 60 && lastOut < start) lastOut += 24 * 60;
+
+    let late = firstIn - start;
+    if (late <= 0 || late >= 12 * 60) late = 0;
+    let early = lastOut === null ? 0 : end - lastOut;
+    if (early <= 0 || early >= 12 * 60) early = 0;
+    if (late || early) {
+      days.push({ date: r.date, late: late, early: early });
+      lateMinutes += late;
+      earlyMinutes += early;
+    }
+  });
+  return { lateMinutes: lateMinutes, earlyMinutes: earlyMinutes, days: days };
+}
+
+/** 核准請假涵蓋的日期：從開始日起算 ceil(天數) 天（半天、時數假只算開始那天） */
+function leaveDatesFromRecords_(leaveRecords) {
+  const dates = {};
+  const list = (leaveRecords && leaveRecords.data) || (Array.isArray(leaveRecords) ? leaveRecords : []);
+  const tz = Session.getScriptTimeZone();
+  list.forEach(rec => {
+    const first = rec.startDate instanceof Date ? rec.startDate : new Date(String(rec.startDate).replace(/-/g, '/'));
+    if (isNaN(first.getTime())) return;
+    const count = Math.max(1, Math.ceil(Number(rec.leaveDays) || 0));
+    for (let i = 0; i < count; i++) {
+      const d = new Date(first.getFullYear(), first.getMonth(), first.getDate() + i);
+      dates[Utilities.formatDate(d, tz, 'yyyy-MM-dd')] = true;
+    }
+  });
+  return dates;
+}
+
 // ==================== 計薪調整（每張薪資單各自填的） ====================
 
 /**

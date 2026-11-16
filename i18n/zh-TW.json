@@ -209,6 +209,8 @@
     "RECORDS_LOAD_FAILED": "載入資料失敗",
     "RECORDS_PUNCH_COUNT": "共 {count} 筆",
     "RECORDS_NO_PUNCHES": "這段期間沒有打卡紀錄",
+    "GRID_HINT_PUNCHES_SCHEDULER": "虛線框是實際打卡（只有管理員和排班人員看得到）。",
+    "SALARY_LATE_EARLY_DEDUCT": "遲到早退扣款",
     "GRID_HINT_PUNCHES": "虛線框是實際打卡（只有管理員看得到）；點員工名字下的連結可看這個月的工時與薪資。",
     "GRID_PUNCH_ACTUAL": "實際打卡",
     "GRID_PUNCH_LATE": "遲到 {minutes} 分",

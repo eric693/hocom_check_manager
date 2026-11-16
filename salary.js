@@ -1478,7 +1478,7 @@ function displaySalaryCalculation(data, container) {
                     <!--  新增：早退扣款 -->
                     ${!isHourly && earlyLeaveDeduction > 0 ? `
                         <div class="calculation-row">
-                            <span>${tHtml('SALARY_EARLY_LEAVE_DEDUCT')}</span>
+                            <span>${tHtml('SALARY_LATE_EARLY_DEDUCT')}</span>
                             <span class="font-mono">${formatCurrency(earlyLeaveDeduction)}</span>
                         </div>
                     ` : ''}
