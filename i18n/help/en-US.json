@@ -16,7 +16,7 @@
         "Besides the buttons, you can punch by typing in LINE or by scanning the QR code on the company tablet (LINE's own QR scanner works best). If you scan with the phone camera and that browser is not logged in yet, you are taken to LINE login and the punch is recorded right after.",
         "If your phone supports fingerprint or face recognition, tap \"Set up biometrics\" once to pair it, then punch with biometrics from then on.",
         "If you forgot to punch or the time is wrong, submit a make-up punch request with a reason and wait for the administrator's approval.",
-        "Fill in your ID number, address, phone and birthday under \"My profile\" - payroll and insurance work needs them.",
+        "Add your phone number under \"My profile\" so the office can reach you.",
         "Under \"My Basic Information\", enter your full name first — punch records and reports show this name instead of your LINE name."
       ],
       "notes": [

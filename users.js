@@ -488,10 +488,13 @@ async function initEmployeeBasicInfo() {
             console.log(' 載入成功，填入資料'); //  改這裡
             
             // 填入表單
-            document.getElementById('employee-id-number').value = res.data.idNumber || '';
-            document.getElementById('employee-address').value = res.data.address || '';
+            // 身分證、地址、生日不再讓員工填，但已經存的要留著（生日禮金看生日），存檔時原樣送回
+            keptBasicInfo = {
+                idNumber: res.data.idNumber || '',
+                address: res.data.address || '',
+                birthDate: res.data.birthDate || ''
+            };
             document.getElementById('employee-phone').value = res.data.phone || '';
-            document.getElementById('employee-birthdate').value = res.data.birthDate || '';
             
             // 顯示最後更新時間
             if (res.data.updatedAt) {
@@ -513,6 +516,9 @@ async function initEmployeeBasicInfo() {
     }
 }
 
+// 員工畫面上已拿掉的欄位（身分證、地址、生日）：載入時記下，存檔時原樣送回，後端才不會清空
+let keptBasicInfo = { idNumber: '', address: '', birthDate: '' };
+
 /**
  *  儲存員工基本資料
  */
@@ -525,10 +531,8 @@ async function saveEmployeeBasicInfo() {
         
         // 取得表單資料
         const realName = (document.getElementById('employee-real-name')?.value || '').trim();
-        const idNumber = document.getElementById('employee-id-number').value.trim();
-        const address = document.getElementById('employee-address').value.trim();
         const phone = document.getElementById('employee-phone').value.trim();
-        const birthDate = document.getElementById('employee-birthdate').value;
+        const { idNumber, address, birthDate } = keptBasicInfo;
         
         // 驗證必填欄位
         if (!realName) {
@@ -541,18 +545,6 @@ async function saveEmployeeBasicInfo() {
         }
         if (/[<>]/.test(realName)) {
             showNotification(t('REAL_NAME_INVALID_CHARS'), 'error');
-            return;
-        }
-        
-        if (!idNumber) {
-            showNotification(t('NOTIF_ID_NUMBER_REQUIRED'), 'error');
-            return;
-        }
-        
-        // 驗證身分證格式（台灣身分證）
-        const idPattern = /^[A-Z][12]\d{8}$/;
-        if (!idPattern.test(idNumber)) {
-            showNotification(t('NOTIF_ID_FORMAT_INVALID'), 'error');
             return;
         }
         

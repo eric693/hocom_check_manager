@@ -16,7 +16,7 @@
         "Ngoài nút bấm, có thể chấm công bằng cách nhắn trong LINE hoặc quét mã QR trên máy tính bảng của công ty (nên dùng trình quét QR của LINE). Nếu quét bằng camera điện thoại mà trình duyệt đó chưa đăng nhập, hệ thống sẽ chuyển đến đăng nhập LINE và chấm công ngay sau đó.",
         "Nếu điện thoại hỗ trợ vân tay hoặc khuôn mặt, bấm \"Thiết lập sinh trắc học\" một lần rồi dùng sinh trắc học để chấm công nhanh.",
         "Quên chấm công hoặc sai giờ thì gửi \"Đề nghị bổ sung chấm công\", ghi rõ lý do và chờ quản trị viên duyệt.",
-        "Điền đủ số CMND/CCCD, địa chỉ, điện thoại và ngày sinh trong \"Thông tin cá nhân\" vì bộ phận lương và bảo hiểm cần dùng.",
+        "Điền số điện thoại trong \"Thông tin cá nhân\" để công ty có thể liên lạc với bạn.",
         "Trong「Thông tin cơ bản của tôi」, hãy điền「Họ tên」(tên thật) trước. Bản ghi chấm công và báo cáo sẽ hiển thị tên này thay cho tên LINE."
       ],
       "notes": [
