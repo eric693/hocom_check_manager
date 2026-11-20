@@ -834,7 +834,9 @@ function sweepLinePunchTokens_(props) {
  */
 function sendLinePunchLink(replyToken, userId, employeeName, punchType) {
   const token = generateLinePunchToken_(userId, punchType);
-  const url = 'https://eric693.github.io/hocom_check_manager/?linePunchToken=' + token;
+  // openExternalBrowser=1：LINE 直接用手機的瀏覽器（Chrome、Safari）開，不用 LINE 內建瀏覽器。
+  // 內建瀏覽器常拿不到定位（會記住先前的拒絕，部分 Android 版本也不穩），員工就算開了權限也打不了卡。
+  const url = 'https://eric693.github.io/hocom_check_manager/?linePunchToken=' + token + '&openExternalBrowser=1';
   const color = punchType === '上班' ? '#4CAF50' : '#FF9800';
   const emoji = punchType === '上班' ? '🟢' : '🟠';
 

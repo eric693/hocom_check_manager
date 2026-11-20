@@ -89,7 +89,8 @@ const DEPLOY_CHECKS = [
   ['LineApi.gs', () => typeof getLineUserInfo_ === 'function'],
   ['LineBotPunch.gs', () => typeof executePunch === 'function' && typeof sweepLinePunchTokens_ === 'function' &&
                              String(determinePunchType).indexOf('nextPunchType_') !== -1 &&
-                             String(sendTodayPunchRecords).indexOf('canSeePunchTimes_') !== -1],
+                             String(sendTodayPunchRecords).indexOf('canSeePunchTimes_') !== -1 &&
+                             String(sendLinePunchLink).indexOf('openExternalBrowser') !== -1],
   ['LineNotification.gs', () => typeof sendLineNotification_ === 'function' &&
                                  String(sendLineNotification_).indexOf('isLineUserId_') !== -1],
   ['LoginLinks.gs', () => typeof handleRedeemLoginLink === 'function' && typeof createSessionForUser_ === 'function' &&
