@@ -209,6 +209,11 @@
   "RECORDS_LOAD_FAILED": "Could not load the data",
   "RECORDS_PUNCH_COUNT": "{count} records",
   "RECORDS_NO_PUNCHES": "No punch records in this period",
+  "GEO_HELP_LINE_ANDROID": "Location is on, but LINE isn't allowed to use it. Go to Settings → Apps → LINE → Permissions → Location, choose \"Allow only while using the app\", then come back and tap Try again. Or tap \"Open in browser\" to punch from your browser.",
+  "GEO_HELP_LINE_IOS": "Location is on, but LINE isn't allowed to use it. Go to Settings → Privacy & Security → Location Services → LINE, choose \"While Using the App\" and turn on Precise Location, then come back and tap Try again. Or tap \"Open in browser\" to punch from your browser.",
+  "GEO_HELP_ANDROID": "Your browser isn't allowed to use location. Tap the icon left of the address bar → Permissions → Location and choose Allow. Also check Settings → Apps → your browser → Permissions → Location, then tap Try again.",
+  "GEO_HELP_IOS": "Safari isn't allowed to use location. Go to Settings → Privacy & Security → Location Services → Safari Websites, choose \"While Using the App\", then come back and tap Try again.",
+  "LPT_OPEN_BROWSER": "Open in browser",
   "GRID_HINT_PUNCHES_SCHEDULER": "Dashed boxes are actual punches (admins and schedulers only).",
   "SALARY_LATE_EARLY_DEDUCT": "Late / early leave deduction",
   "GRID_HINT_PUNCHES": "Dashed boxes are actual punches (admins only). Use the link under a name to see that month’s hours and pay.",
@@ -556,7 +561,7 @@
   "BIOMETRIC_PUNCH_IN_BTN": "Punch In",
   "BIOMETRIC_PUNCH_OUT_BTN": "Punch Out",
   "LINE_CHANNEL_TITLE": "Join Employee LINE Channel for Latest Announcements!",
-  "LINE_CHANNEL_ID": "@522akuxc",
+  "LINE_CHANNEL_ID": "@070ochze",
 
 
   "MONTHLY_STATS_TITLE": "Monthly Attendance Statistics",

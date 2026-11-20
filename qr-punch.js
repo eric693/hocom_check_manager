@@ -30,7 +30,7 @@ async function handleLinePunchFromUrl() {
       <div style="background:#fff;border-radius:16px;padding:32px 24px;max-width:320px;width:90%;text-align:center;">
         <div id="lpo-icon" style="font-size:48px;margin-bottom:12px;">📍</div>
         <div id="lpo-title" style="font-size:20px;font-weight:bold;margin-bottom:8px;"></div>
-        <div id="lpo-sub" style="font-size:14px;color:#666;margin-bottom:16px;"></div>
+        <div id="lpo-sub" style="font-size:14px;color:#666;margin-bottom:16px;line-height:1.6;text-align:left;"></div>
         <button id="lpo-close" style="display:none;margin-top:8px;padding:10px 28px;border-radius:8px;border:none;background:#4CAF50;color:#fff;font-size:16px;cursor:pointer;"></button>
       </div>`;
     document.body.appendChild(overlay);
@@ -64,6 +64,22 @@ async function handleLinePunchFromUrl() {
         retry.onclick = () => { retry.style.display = 'none'; attempt(); };
     };
 
+    // 在 LINE 裡拿不到定位時，改用手機的瀏覽器開同一條連結。
+    // 網址上的 token 已經被 replaceState 拿掉，LINE 選單的「用預設瀏覽器開啟」會開到沒有 token 的首頁，
+    // 所以這裡自己組一條帶 token 的；openExternalBrowser=1 讓 LINE 直接交給外部瀏覽器。
+    const showBrowserLink = () => {
+        if (!isInLineApp()) return;
+        let link = overlay.querySelector('#lpo-browser');
+        if (!link) {
+            link = document.createElement('a');
+            link.id = 'lpo-browser';
+            link.style.cssText = 'display:block;margin:0 0 8px;padding:12px;border-radius:8px;border:1px solid #2563eb;color:#2563eb;font-size:16px;font-weight:bold;text-decoration:none;';
+            overlay.querySelector('div').insertBefore(link, overlay.querySelector('#lpo-close'));
+        }
+        link.textContent = t('LPT_OPEN_BROWSER');
+        link.href = `${location.origin}${location.pathname}?linePunchToken=${encodeURIComponent(token)}&openExternalBrowser=1`;
+    };
+
     const attempt = async () => {
         overlay.querySelector('#lpo-icon').textContent = '📍';
         overlay.querySelector('#lpo-title').textContent = t('LPT_LOCATING');
@@ -75,9 +91,13 @@ async function handleLinePunchFromUrl() {
             position = await getPunchPosition();
         } catch (err) {
             const geoErrors = { 1: t('LPT_GEO_DENIED'), 3: t('LPT_GEO_TIMEOUT') };
-            // 拒絕定位權限再試也沒用；其他（訊號差、逾時）可以再試
-            if (err && err.code === 1) setResult('❌', t('LPT_NO_LOCATION'), geoErrors[1], '#f44336');
-            else showRetry('❌', t('LPT_NO_LOCATION'), geoErrors[err && err.code] || t('LPT_GEO_CHECK'));
+            // 權限被拒：告訴員工去哪裡開，開好回來按「再試一次」；在 LINE 裡也可以改用瀏覽器開
+            if (err && err.code === 1) {
+                showRetry('❌', t('LPT_NO_LOCATION'), t(geoDeniedHelpKey()));
+                showBrowserLink();
+            } else {
+                showRetry('❌', t('LPT_NO_LOCATION'), geoErrors[err && err.code] || t('LPT_GEO_CHECK'));
+            }
             return;
         }
 

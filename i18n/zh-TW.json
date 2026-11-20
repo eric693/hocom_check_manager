@@ -209,6 +209,11 @@
     "RECORDS_LOAD_FAILED": "載入資料失敗",
     "RECORDS_PUNCH_COUNT": "共 {count} 筆",
     "RECORDS_NO_PUNCHES": "這段期間沒有打卡紀錄",
+    "GEO_HELP_LINE_ANDROID": "手機定位有開，但 LINE 沒有定位權限。請到手機「設定 → 應用程式 → LINE → 權限 → 位置資訊」，選「僅在使用期間允許」，再回來按「再試一次」。也可以按「用瀏覽器開啟」改在瀏覽器打卡。",
+    "GEO_HELP_LINE_IOS": "手機定位有開，但 LINE 沒有定位權限。請到「設定 → 隱私權與安全性 → 定位服務 → LINE」，選「使用 App 期間」並打開「精確位置」，再回來按「再試一次」。也可以按「用瀏覽器開啟」改在瀏覽器打卡。",
+    "GEO_HELP_ANDROID": "瀏覽器沒有定位權限。請按網址列左邊的圖示 → 權限 → 位置，改成「允許」；並確認手機「設定 → 應用程式 → 瀏覽器 → 權限 → 位置資訊」也是允許，再按「再試一次」。",
+    "GEO_HELP_IOS": "Safari 沒有定位權限。請到「設定 → 隱私權與安全性 → 定位服務 → Safari 網站」，選「使用 App 期間」，再回來按「再試一次」。",
+    "LPT_OPEN_BROWSER": "用瀏覽器開啟",
     "GRID_HINT_PUNCHES_SCHEDULER": "虛線框是實際打卡（只有管理員和排班人員看得到）。",
     "SALARY_LATE_EARLY_DEDUCT": "遲到早退扣款",
     "GRID_HINT_PUNCHES": "虛線框是實際打卡（只有管理員看得到）；點員工名字下的連結可看這個月的工時與薪資。",
@@ -574,7 +579,7 @@
     "BIOMETRIC_PUNCH_IN_BTN": "上班打卡",
     "BIOMETRIC_PUNCH_OUT_BTN": "下班打卡",
     "LINE_CHANNEL_TITLE": "加入員工 LINE 頻道，掌握最新公告！",
-    "LINE_CHANNEL_ID": "@522akuxc",
+    "LINE_CHANNEL_ID": "@070ochze",
 
 
 

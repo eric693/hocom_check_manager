@@ -222,6 +222,11 @@
   "RECORDS_LOAD_FAILED": "Không tải được dữ liệu",
   "RECORDS_PUNCH_COUNT": "Tổng {count} lượt",
   "RECORDS_NO_PUNCHES": "Không có dữ liệu chấm công trong khoảng này",
+  "GEO_HELP_LINE_ANDROID": "Định vị đã bật nhưng LINE chưa được cấp quyền vị trí. Vào Cài đặt → Ứng dụng → LINE → Quyền → Vị trí, chọn \"Chỉ cho phép khi dùng ứng dụng\", rồi quay lại bấm \"Thử lại\". Hoặc bấm \"Mở bằng trình duyệt\" để chấm công trên trình duyệt.",
+  "GEO_HELP_LINE_IOS": "Định vị đã bật nhưng LINE chưa được cấp quyền vị trí. Vào Cài đặt → Quyền riêng tư & Bảo mật → Dịch vụ định vị → LINE, chọn \"Khi dùng ứng dụng\" và bật \"Vị trí chính xác\", rồi quay lại bấm \"Thử lại\". Hoặc bấm \"Mở bằng trình duyệt\" để chấm công trên trình duyệt.",
+  "GEO_HELP_ANDROID": "Trình duyệt chưa được cấp quyền vị trí. Bấm biểu tượng bên trái thanh địa chỉ → Quyền → Vị trí, chọn \"Cho phép\"; kiểm tra thêm Cài đặt → Ứng dụng → trình duyệt → Quyền → Vị trí, rồi bấm \"Thử lại\".",
+  "GEO_HELP_IOS": "Safari chưa được cấp quyền vị trí. Vào Cài đặt → Quyền riêng tư & Bảo mật → Dịch vụ định vị → Trang web Safari, chọn \"Khi dùng ứng dụng\", rồi quay lại bấm \"Thử lại\".",
+  "LPT_OPEN_BROWSER": "Mở bằng trình duyệt",
   "GRID_HINT_PUNCHES_SCHEDULER": "Ô viền nét đứt là giờ chấm công thực tế (chỉ quản trị viên và người xếp ca thấy).",
   "SALARY_LATE_EARLY_DEDUCT": "Khấu trừ đi trễ / về sớm",
   "GRID_HINT_PUNCHES": "Ô viền nét đứt là giờ chấm công thực tế (chỉ quản trị viên thấy). Bấm liên kết dưới tên để xem giờ làm và lương tháng này.",
@@ -719,7 +724,7 @@
   "BIOMETRIC_PUNCH_OUT_BTN": "Chấm công ra",
 
   "LINE_CHANNEL_TITLE": "Tham gia kênh LINE nội bộ để nhận thông báo mới nhất!",
-  "LINE_CHANNEL_ID": "@522akuxc",
+  "LINE_CHANNEL_ID": "@070ochze",
 
   "MONTHLY_STATS_TITLE": "Thống kê chấm công tháng này",
   "STATS_TOTAL_HOURS": "Tổng giờ làm",

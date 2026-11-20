@@ -2786,7 +2786,7 @@ async function doPunch(type) {
     try {
         pos = await getPunchPosition();
     } catch (err) {
-        const msg = err && err.code === 1 ? t('LPT_GEO_DENIED') : err && err.code === 3 ? t('LPT_GEO_TIMEOUT') : t('LPT_GEO_CHECK');
+        const msg = err && err.code === 1 ? t(geoDeniedHelpKey()) : err && err.code === 3 ? t('LPT_GEO_TIMEOUT') : t('LPT_GEO_CHECK');
         showNotification(t("ERROR_GEOLOCATION", { msg: msg }), "error");
         generalButtonState(button, 'idle');
         _isPunching = false;  //  釋放鎖（定位失敗也要釋放）

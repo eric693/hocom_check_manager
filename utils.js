@@ -129,6 +129,21 @@ function setElementSrc(id, src) {
  * 以前只試高精度，室內常常要等滿 15 秒才失敗；網頁打卡甚至沒有時間上限，會一直轉圈。
  * 使用者拒絕定位權限（code 1）就不再試，直接丟出去讓畫面提示。
  */
+/**
+ * 定位權限被拒（code 1）時，依手機和瀏覽器告訴員工要去哪裡開。
+ * 最常見的是「手機定位有開，但 LINE 這個 App 沒有定位權限」，在 LINE 裡開的頁面就拿不到位置。
+ */
+function isInLineApp() {
+    return /\bLine\//i.test(navigator.userAgent || '');
+}
+
+function geoDeniedHelpKey() {
+    const ua = navigator.userAgent || '';
+    const ios = /iPhone|iPad|iPod/i.test(ua);
+    if (isInLineApp()) return ios ? 'GEO_HELP_LINE_IOS' : 'GEO_HELP_LINE_ANDROID';
+    return ios ? 'GEO_HELP_IOS' : 'GEO_HELP_ANDROID';
+}
+
 async function getPunchPosition() {
     if (!navigator.geolocation) {
         const error = new Error('Geolocation not supported');
